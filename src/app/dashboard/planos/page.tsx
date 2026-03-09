@@ -1,112 +1,182 @@
 "use client";
-
-import { useEffect, useState, useCallback } from "react";
-import { apiGet, apiPost } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 interface Plan {
-  id: string;
-  name: string;
-  label: string;
-  monthlyPrice: number;
-  annualPrice: number;
-  features: string;
-  isActive: boolean;
-  sortOrder: number;
+  id: string; name: string; label: string; monthlyPrice: number; annualPrice: number; features: string;
+  hasDashboard: boolean; hasLandingPage: boolean; menuVisaoGeral: boolean; menuCongregacoes: boolean;
+  menuMembros: boolean; menuFinancas: boolean; menuRelatorios: boolean; menuDirigentes: boolean;
+  menuSecretaria: boolean; menuMissionarios: boolean; menuEventos: boolean; menuPermissoes: boolean;
+  menuNoticias: boolean; menuIgreja: boolean; menuEBD: boolean; isActive: boolean; sortOrder: number;
 }
+
+const MENU_FIELDS: { key: keyof Plan; label: string }[] = [
+  { key: "menuVisaoGeral", label: "Visão Geral" }, { key: "menuCongregacoes", label: "Congregações" },
+  { key: "menuMembros", label: "Membros" }, { key: "menuFinancas", label: "Finanças" },
+  { key: "menuRelatorios", label: "Relatórios" }, { key: "menuDirigentes", label: "Dirigentes" },
+  { key: "menuSecretaria", label: "Secretaria" }, { key: "menuMissionarios", label: "Missionários" },
+  { key: "menuEventos", label: "Eventos" }, { key: "menuPermissoes", label: "Permissões" },
+  { key: "menuNoticias", label: "Notícias" }, { key: "menuIgreja", label: "Igreja" },
+  { key: "menuEBD", label: "EBD" },
+];
+
+const emptyForm = (): Partial<Plan> & { name: string; label: string } => ({
+  name: "", label: "", monthlyPrice: 0, annualPrice: 0, features: "[]",
+  hasDashboard: true, hasLandingPage: false,
+  menuVisaoGeral: true, menuCongregacoes: true, menuMembros: true, menuFinancas: true,
+  menuRelatorios: true, menuDirigentes: true, menuSecretaria: false, menuMissionarios: false,
+  menuEventos: false, menuPermissoes: false, menuNoticias: false, menuIgreja: false, menuEBD: false,
+  isActive: true, sortOrder: 0,
+});
 
 export default function PlanosPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: "", label: "", monthlyPrice: 0, annualPrice: 0, features: "", isActive: true, sortOrder: 0 });
+  const [editing, setEditing] = useState<Plan | null>(null);
+  const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [seeding, setSeeding] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await apiGet<{ plans: Plan[] }>("/api/admin/plans");
-      setPlans(data.plans || []);
-    } catch { /* ignore */ }
+  async function loadPlans() {
+    setLoading(true);
+    try { const data = await api<{ ok: boolean; plans: Plan[] }>("/api/admin/plans"); if (data.ok) setPlans(data.plans); } catch {}
     setLoading(false);
-  }, []);
+  }
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadPlans(); }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
+  function startEdit(plan: Plan) { setEditing(plan); setForm({ ...plan }); setMsg(""); setShowForm(true); }
+  function startNew() { setEditing(null); setForm(emptyForm()); setMsg(""); setShowForm(true); }
+
+  async function savePlan(e: React.FormEvent) {
+    e.preventDefault(); setSaving(true); setMsg("");
     try {
-      await apiPost("/api/admin/plans", form);
-      setShowModal(false);
-      load();
-    } catch { /* ignore */ }
+      const data = await api<{ ok: boolean; message?: string }>("/api/admin/plans", { method: "POST", body: form });
+      if (data.ok) { setMsg("✅ Plano salvo!"); loadPlans(); setShowForm(false); setEditing(null); setForm(emptyForm()); }
+      else setMsg(`❌ ${data.message}`);
+    } catch (err: any) { setMsg(`❌ ${err.message}`); }
     setSaving(false);
-  };
+  }
+
+  async function deletePlan(id: string) {
+    if (!confirm("Excluir este plano?")) return;
+    try {
+      const data = await api<{ ok: boolean; message?: string }>(`/api/admin/plans/${id}`, { method: "DELETE" });
+      if (data.ok) { setMsg("✅ Plano excluído"); loadPlans(); } else setMsg(`❌ ${data.message}`);
+    } catch { setMsg("❌ Erro de rede"); }
+  }
+
+  async function seedPlans() {
+    setSeeding(true);
+    try {
+      const data = await api<{ ok: boolean; message?: string }>("/api/admin/plans/seed", { method: "POST" });
+      if (data.ok) { setMsg(`✅ ${data.message}`); loadPlans(); } else setMsg(`❌ ${data.message}`);
+    } catch { setMsg("❌ Erro de rede"); }
+    setSeeding(false);
+  }
+
+  const toggleMenu = (key: keyof Plan) => setForm((f) => ({ ...f, [key]: !f[key as keyof typeof f] }));
+
+  if (loading) return <div className="text-gray-400">Carregando planos…</div>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Planos</h1>
-          <p className="text-sm text-gray-500">Configure os planos de assinatura</p>
+          <h1 className="text-2xl font-bold text-gray-800">📋 Planos</h1>
+          <p className="text-sm text-gray-500">Gerencie os planos disponíveis para os clientes</p>
         </div>
-        <button onClick={() => { setForm({ name: "", label: "", monthlyPrice: 0, annualPrice: 0, features: "", isActive: true, sortOrder: 0 }); setShowModal(true); }}
-          className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition">
-          + Novo Plano
-        </button>
+        <div className="flex gap-2">
+          {plans.length === 0 && <button onClick={seedPlans} disabled={seeding} className="rounded-lg bg-purple-500 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-600 transition disabled:opacity-50">{seeding ? "Criando…" : "�� Criar planos padrão"}</button>}
+          <button onClick={startNew} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition">+ Novo plano</button>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="space-y-3">{[1, 2].map((i) => <div key={i} className="h-20 rounded-lg bg-gray-100 animate-pulse" />)}</div>
-      ) : plans.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-4xl mb-2">📋</p>
-          <p>Nenhum plano cadastrado</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {plans.map((p) => (
-            <div key={p.id} className={`rounded-xl border p-5 ${p.isActive ? "bg-white border-gray-200" : "bg-gray-50 border-gray-100 opacity-60"}`}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-gray-800">{p.label}</h3>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${p.isActive ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
-                  {p.isActive ? "Ativo" : "Inativo"}
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-sky-600">R$ {p.monthlyPrice.toFixed(2)}<span className="text-sm font-normal text-gray-400">/mês</span></p>
-              <p className="text-sm text-gray-500 mt-1">Anual: R$ {p.annualPrice.toFixed(2)}</p>
-              <p className="text-xs text-gray-400 mt-3 line-clamp-2">{p.features}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      {msg && <div className={`mb-4 rounded-lg p-3 text-sm border ${msg.startsWith("✅") ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-600 border-red-200"}`}>{msg}</div>}
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <form onSubmit={handleSave} className="w-full max-w-md mx-4 rounded-2xl bg-white p-6 shadow-2xl">
-            <h2 className="text-lg font-bold mb-4">Novo Plano</h2>
-            <div className="space-y-3">
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome (ex: PRO)" required
-                className="block w-full rounded-lg border px-3 py-2 text-sm" />
-              <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="Label (ex: Plano Profissional)" required
-                className="block w-full rounded-lg border px-3 py-2 text-sm" />
-              <div className="grid grid-cols-2 gap-3">
-                <input type="number" step="0.01" value={form.monthlyPrice} onChange={(e) => setForm({ ...form, monthlyPrice: +e.target.value })} placeholder="Preço mensal"
-                  className="block w-full rounded-lg border px-3 py-2 text-sm" />
-                <input type="number" step="0.01" value={form.annualPrice} onChange={(e) => setForm({ ...form, annualPrice: +e.target.value })} placeholder="Preço anual"
-                  className="block w-full rounded-lg border px-3 py-2 text-sm" />
+      {/* Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+        {plans.map((p) => (
+          <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-5 relative">
+            {!p.isActive && <div className="absolute top-3 right-3 bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded">INATIVO</div>}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">{p.name === "BASIC" ? "🥉" : p.name === "PRO" ? "🥈" : "🥇"}</span>
+              <div>
+                <div className="text-gray-800 font-bold">{p.label}</div>
+                <div className="text-gray-400 text-xs">{p.name}</div>
               </div>
-              <textarea value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} placeholder="Features (separadas por vírgula)" rows={3}
-                className="block w-full rounded-lg border px-3 py-2 text-sm" />
             </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
-              <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50">
-                {saving ? "Salvando..." : "Criar"}
-              </button>
+            <div className="flex gap-6 mb-3">
+              <div>
+                <div className="text-[10px] text-gray-400 uppercase font-semibold">Mensal</div>
+                <div className="text-green-600 text-lg font-bold">R$ {p.monthlyPrice.toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-gray-400 uppercase font-semibold">Anual</div>
+                <div className="text-sky-600 text-lg font-bold">R$ {p.annualPrice.toFixed(2)}</div>
+              </div>
+            </div>
+            <div className="mb-2">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Acesso</div>
+              <div className="flex gap-1 flex-wrap">
+                <Tag active={p.hasDashboard}>Dashboard</Tag>
+                <Tag active={p.hasLandingPage}>Landing Page</Tag>
+              </div>
+            </div>
+            <div className="mb-3">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Menus</div>
+              <div className="flex gap-1 flex-wrap">
+                {MENU_FIELDS.map(({ key, label }) => <Tag key={key} active={p[key] as boolean}>{label}</Tag>)}
+              </div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => startEdit(p)} className="text-xs text-sky-600 border border-sky-300 rounded-lg px-3 py-1 hover:bg-sky-50 transition font-semibold">✏️ Editar</button>
+              <button onClick={() => deletePlan(p.id)} className="text-xs text-red-500 border border-red-300 rounded-lg px-3 py-1 hover:bg-red-50 transition font-semibold">🗑 Excluir</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Formulário */}
+      {showForm && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">{editing ? `Editar: ${editing.label}` : "Novo Plano"}</h2>
+          <form onSubmit={savePlan}>
+            <div className="grid grid-cols-3 gap-3">
+              <div><label className="block text-xs font-medium text-gray-500 mb-1">Nome (código) *</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-sky-500" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.toUpperCase() }))} placeholder="BASIC" disabled={!!editing} /></div>
+              <div><label className="block text-xs font-medium text-gray-500 mb-1">Label *</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-sky-500" required value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} placeholder="Plano Básico" /></div>
+              <div><label className="block text-xs font-medium text-gray-500 mb-1">Ordem</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none" type="number" value={form.sortOrder ?? 0} onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))} /></div>
+              <div><label className="block text-xs font-medium text-gray-500 mb-1">Preço Mensal (R$)</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none" type="number" step="0.01" min="0" value={form.monthlyPrice ?? 0} onChange={(e) => setForm((f) => ({ ...f, monthlyPrice: Number(e.target.value) }))} /></div>
+              <div><label className="block text-xs font-medium text-gray-500 mb-1">Preço Anual (R$)</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none" type="number" step="0.01" min="0" value={form.annualPrice ?? 0} onChange={(e) => setForm((f) => ({ ...f, annualPrice: Number(e.target.value) }))} /></div>
+              <div className="flex items-end gap-4">
+                <label className="flex items-center gap-1.5 text-gray-500 text-xs"><input type="checkbox" checked={form.hasDashboard ?? true} onChange={() => setForm((f) => ({ ...f, hasDashboard: !f.hasDashboard }))} /> Dashboard</label>
+                <label className="flex items-center gap-1.5 text-gray-500 text-xs"><input type="checkbox" checked={form.hasLandingPage ?? false} onChange={() => setForm((f) => ({ ...f, hasLandingPage: !f.hasLandingPage }))} /> Landing</label>
+                <label className="flex items-center gap-1.5 text-gray-500 text-xs"><input type="checkbox" checked={form.isActive ?? true} onChange={() => setForm((f) => ({ ...f, isActive: !f.isActive }))} /> Ativo</label>
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-gray-500 mb-2">Menus da Dashboard</label>
+              <div className="flex flex-wrap gap-2">
+                {MENU_FIELDS.map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                    <input type="checkbox" checked={!!form[key as keyof typeof form]} onChange={() => toggleMenu(key)} /> {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button type="submit" disabled={saving} className="rounded-lg bg-sky-500 px-5 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition disabled:opacity-50">{saving ? "Salvando…" : "Salvar plano"}</button>
+              <button type="button" onClick={() => { setShowForm(false); setEditing(null); setForm(emptyForm()); }} className="rounded-lg px-4 py-2 text-sm text-gray-500 border border-gray-300 hover:bg-gray-50 transition">Cancelar</button>
             </div>
           </form>
         </div>
       )}
     </div>
   );
+}
+
+function Tag({ active, children }: { active: boolean; children: React.ReactNode }) {
+  return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${active ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-500 border-red-200"}`}>{children}</span>;
 }
