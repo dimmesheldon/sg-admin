@@ -29,6 +29,10 @@ const emptyForm = (): Partial<Plan> & { name: string; label: string } => ({
   isActive: true, sortOrder: 0,
 });
 
+const inputStyle: React.CSSProperties = { width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 6, padding: "8px 12px", color: "#f1f5f9", fontSize: 13, outline: "none" };
+const labelStyle: React.CSSProperties = { display: "block", color: "#94a3b8", fontSize: 11, fontWeight: 600, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" };
+const panelStyle: React.CSSProperties = { background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: 20 };
+
 export default function PlanosPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +48,6 @@ export default function PlanosPage() {
     try { const data = await api<{ ok: boolean; plans: Plan[] }>("/api/admin/plans"); if (data.ok) setPlans(data.plans); } catch {}
     setLoading(false);
   }
-
   useEffect(() => { loadPlans(); }, []);
 
   function startEdit(plan: Plan) { setEditing(plan); setForm({ ...plan }); setMsg(""); setShowForm(true); }
@@ -79,61 +82,64 @@ export default function PlanosPage() {
 
   const toggleMenu = (key: keyof Plan) => setForm((f) => ({ ...f, [key]: !f[key as keyof typeof f] }));
 
-  if (loading) return <div className="text-gray-400">Carregando planos…</div>;
+  const msgBg = msg.startsWith("✅") ? "#065f4633" : "#7f1d1d";
+  const msgColor = msg.startsWith("✅") ? "#34d399" : "#fca5a5";
+
+  if (loading) return <div style={{ color: "#64748b" }}>Carregando planos…</div>;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">📋 Planos</h1>
-          <p className="text-sm text-gray-500">Gerencie os planos disponíveis para os clientes</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9" }}>📋 Planos</h1>
+          <p style={{ fontSize: 13, color: "#64748b" }}>Gerencie os planos disponíveis para os clientes</p>
         </div>
-        <div className="flex gap-2">
-          {plans.length === 0 && <button onClick={seedPlans} disabled={seeding} className="rounded-lg bg-purple-500 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-600 transition disabled:opacity-50">{seeding ? "Criando…" : "�� Criar planos padrão"}</button>}
-          <button onClick={startNew} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition">+ Novo plano</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {plans.length === 0 && <button onClick={seedPlans} disabled={seeding} style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: seeding ? 0.5 : 1 }}>{seeding ? "Criando…" : "🌱 Criar planos padrão"}</button>}
+          <button onClick={startNew} style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+ Novo plano</button>
         </div>
       </div>
 
-      {msg && <div className={`mb-4 rounded-lg p-3 text-sm border ${msg.startsWith("✅") ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-600 border-red-200"}`}>{msg}</div>}
+      {msg && <div style={{ background: msgBg, color: msgColor, padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{msg}</div>}
 
       {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 20 }}>
         {plans.map((p) => (
-          <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-5 relative">
-            {!p.isActive && <div className="absolute top-3 right-3 bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded">INATIVO</div>}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">{p.name === "BASIC" ? "🥉" : p.name === "PRO" ? "🥈" : "🥇"}</span>
+          <div key={p.id} style={{ ...panelStyle, position: "relative" }}>
+            {!p.isActive && <div style={{ position: "absolute", top: 12, right: 12, background: "#7f1d1d", color: "#fca5a5", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>INATIVO</div>}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 20 }}>{p.name === "BASIC" ? "🥉" : p.name === "PRO" ? "🥈" : "🥇"}</span>
               <div>
-                <div className="text-gray-800 font-bold">{p.label}</div>
-                <div className="text-gray-400 text-xs">{p.name}</div>
+                <div style={{ color: "#f1f5f9", fontWeight: 700 }}>{p.label}</div>
+                <div style={{ color: "#475569", fontSize: 11 }}>{p.name}</div>
               </div>
             </div>
-            <div className="flex gap-6 mb-3">
+            <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
               <div>
-                <div className="text-[10px] text-gray-400 uppercase font-semibold">Mensal</div>
-                <div className="text-green-600 text-lg font-bold">R$ {p.monthlyPrice.toFixed(2)}</div>
+                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Mensal</div>
+                <div style={{ color: "#34d399", fontSize: 18, fontWeight: 700 }}>R$ {p.monthlyPrice.toFixed(2)}</div>
               </div>
               <div>
-                <div className="text-[10px] text-gray-400 uppercase font-semibold">Anual</div>
-                <div className="text-sky-600 text-lg font-bold">R$ {p.annualPrice.toFixed(2)}</div>
+                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>Anual</div>
+                <div style={{ color: "#60a5fa", fontSize: 18, fontWeight: 700 }}>R$ {p.annualPrice.toFixed(2)}</div>
               </div>
             </div>
-            <div className="mb-2">
-              <div className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Acesso</div>
-              <div className="flex gap-1 flex-wrap">
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", fontWeight: 600, marginBottom: 4 }}>Acesso</div>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 <Tag active={p.hasDashboard}>Dashboard</Tag>
                 <Tag active={p.hasLandingPage}>Landing Page</Tag>
               </div>
             </div>
-            <div className="mb-3">
-              <div className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Menus</div>
-              <div className="flex gap-1 flex-wrap">
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", fontWeight: 600, marginBottom: 4 }}>Menus</div>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 {MENU_FIELDS.map(({ key, label }) => <Tag key={key} active={p[key] as boolean}>{label}</Tag>)}
               </div>
             </div>
-            <div className="flex gap-2 mt-3">
-              <button onClick={() => startEdit(p)} className="text-xs text-sky-600 border border-sky-300 rounded-lg px-3 py-1 hover:bg-sky-50 transition font-semibold">✏️ Editar</button>
-              <button onClick={() => deletePlan(p.id)} className="text-xs text-red-500 border border-red-300 rounded-lg px-3 py-1 hover:bg-red-50 transition font-semibold">🗑 Excluir</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={() => startEdit(p)} style={{ background: "none", border: "1px solid #334155", color: "#60a5fa", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>✏️ Editar</button>
+              <button onClick={() => deletePlan(p.id)} style={{ background: "none", border: "1px solid #334155", color: "#f87171", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>🗑 Excluir</button>
             </div>
           </div>
         ))}
@@ -141,34 +147,34 @@ export default function PlanosPage() {
 
       {/* Formulário */}
       {showForm && (
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">{editing ? `Editar: ${editing.label}` : "Novo Plano"}</h2>
+        <div style={panelStyle}>
+          <h2 style={{ ...labelStyle, marginBottom: 14 }}>{editing ? `Editar: ${editing.label}` : "Novo Plano"}</h2>
           <form onSubmit={savePlan}>
-            <div className="grid grid-cols-3 gap-3">
-              <div><label className="block text-xs font-medium text-gray-500 mb-1">Nome (código) *</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-sky-500" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.toUpperCase() }))} placeholder="BASIC" disabled={!!editing} /></div>
-              <div><label className="block text-xs font-medium text-gray-500 mb-1">Label *</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-sky-500" required value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} placeholder="Plano Básico" /></div>
-              <div><label className="block text-xs font-medium text-gray-500 mb-1">Ordem</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none" type="number" value={form.sortOrder ?? 0} onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))} /></div>
-              <div><label className="block text-xs font-medium text-gray-500 mb-1">Preço Mensal (R$)</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none" type="number" step="0.01" min="0" value={form.monthlyPrice ?? 0} onChange={(e) => setForm((f) => ({ ...f, monthlyPrice: Number(e.target.value) }))} /></div>
-              <div><label className="block text-xs font-medium text-gray-500 mb-1">Preço Anual (R$)</label><input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none" type="number" step="0.01" min="0" value={form.annualPrice ?? 0} onChange={(e) => setForm((f) => ({ ...f, annualPrice: Number(e.target.value) }))} /></div>
-              <div className="flex items-end gap-4">
-                <label className="flex items-center gap-1.5 text-gray-500 text-xs"><input type="checkbox" checked={form.hasDashboard ?? true} onChange={() => setForm((f) => ({ ...f, hasDashboard: !f.hasDashboard }))} /> Dashboard</label>
-                <label className="flex items-center gap-1.5 text-gray-500 text-xs"><input type="checkbox" checked={form.hasLandingPage ?? false} onChange={() => setForm((f) => ({ ...f, hasLandingPage: !f.hasLandingPage }))} /> Landing</label>
-                <label className="flex items-center gap-1.5 text-gray-500 text-xs"><input type="checkbox" checked={form.isActive ?? true} onChange={() => setForm((f) => ({ ...f, isActive: !f.isActive }))} /> Ativo</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              <div><label style={labelStyle}>Nome (código) *</label><input style={inputStyle} required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.toUpperCase() }))} placeholder="BASIC" disabled={!!editing} /></div>
+              <div><label style={labelStyle}>Label *</label><input style={inputStyle} required value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} placeholder="Plano Básico" /></div>
+              <div><label style={labelStyle}>Ordem</label><input style={inputStyle} type="number" value={form.sortOrder ?? 0} onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))} /></div>
+              <div><label style={labelStyle}>Preço Mensal (R$)</label><input style={inputStyle} type="number" step="0.01" min="0" value={form.monthlyPrice ?? 0} onChange={(e) => setForm((f) => ({ ...f, monthlyPrice: Number(e.target.value) }))} /></div>
+              <div><label style={labelStyle}>Preço Anual (R$)</label><input style={inputStyle} type="number" step="0.01" min="0" value={form.annualPrice ?? 0} onChange={(e) => setForm((f) => ({ ...f, annualPrice: Number(e.target.value) }))} /></div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#94a3b8", fontSize: 12 }}><input type="checkbox" checked={form.hasDashboard ?? true} onChange={() => setForm((f) => ({ ...f, hasDashboard: !f.hasDashboard }))} /> Dashboard</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#94a3b8", fontSize: 12 }}><input type="checkbox" checked={form.hasLandingPage ?? false} onChange={() => setForm((f) => ({ ...f, hasLandingPage: !f.hasLandingPage }))} /> Landing</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#94a3b8", fontSize: 12 }}><input type="checkbox" checked={form.isActive ?? true} onChange={() => setForm((f) => ({ ...f, isActive: !f.isActive }))} /> Ativo</label>
               </div>
             </div>
-            <div className="mt-4">
-              <label className="block text-xs font-medium text-gray-500 mb-2">Menus da Dashboard</label>
-              <div className="flex flex-wrap gap-2">
+            <div style={{ marginTop: 14 }}>
+              <label style={{ ...labelStyle, marginBottom: 8 }}>Menus da Dashboard</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {MENU_FIELDS.map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                  <label key={key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#94a3b8", background: "#0f172a", padding: "6px 12px", borderRadius: 6, border: "1px solid #334155", cursor: "pointer" }}>
                     <input type="checkbox" checked={!!form[key as keyof typeof form]} onChange={() => toggleMenu(key)} /> {label}
                   </label>
                 ))}
               </div>
             </div>
-            <div className="flex gap-3 mt-4">
-              <button type="submit" disabled={saving} className="rounded-lg bg-sky-500 px-5 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition disabled:opacity-50">{saving ? "Salvando…" : "Salvar plano"}</button>
-              <button type="button" onClick={() => { setShowForm(false); setEditing(null); setForm(emptyForm()); }} className="rounded-lg px-4 py-2 text-sm text-gray-500 border border-gray-300 hover:bg-gray-50 transition">Cancelar</button>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button type="submit" disabled={saving} style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 6, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: saving ? 0.5 : 1 }}>{saving ? "Salvando…" : "Salvar plano"}</button>
+              <button type="button" onClick={() => { setShowForm(false); setEditing(null); setForm(emptyForm()); }} style={{ background: "none", color: "#94a3b8", border: "1px solid #334155", borderRadius: 6, padding: "8px 14px", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
             </div>
           </form>
         </div>
@@ -178,5 +184,9 @@ export default function PlanosPage() {
 }
 
 function Tag({ active, children }: { active: boolean; children: React.ReactNode }) {
-  return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${active ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-500 border-red-200"}`}>{children}</span>;
+  return (
+    <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, border: "1px solid", background: active ? "#065f4633" : "#7f1d1d33", color: active ? "#34d399" : "#f87171", borderColor: active ? "#065f4644" : "#7f1d1d44" }}>
+      {children}
+    </span>
+  );
 }

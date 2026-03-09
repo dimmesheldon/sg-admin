@@ -18,30 +18,21 @@ export default function SuportePage() {
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   async function loadRooms() {
-    try {
-      const data = await api<{ ok: boolean; rooms: Room[] }>("/api/admin/chat/rooms");
-      if (data.ok) setRooms(data.rooms || []);
-    } catch {}
+    try { const data = await api<{ ok: boolean; rooms: Room[] }>("/api/admin/chat/rooms"); if (data.ok) setRooms(data.rooms || []); } catch {}
     setLoading(false);
   }
 
   async function loadMessages(roomId: string) {
-    try {
-      const data = await api<{ ok: boolean; messages: Message[] }>(`/api/admin/chat/rooms/${roomId}/messages`);
-      if (data.ok) setMessages(data.messages || []);
-    } catch {}
+    try { const data = await api<{ ok: boolean; messages: Message[] }>(`/api/admin/chat/rooms/${roomId}/messages`); if (data.ok) setMessages(data.messages || []); } catch {}
   }
 
   useEffect(() => { loadRooms(); }, []);
-
   useEffect(() => {
     if (!activeRoom) return;
     loadMessages(activeRoom.id);
-    // Polling a cada 5s
     pollRef.current = setInterval(() => loadMessages(activeRoom.id), 5000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [activeRoom?.id]);
-
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   function openRoom(room: Room) { setActiveRoom(room); setMessages([]); }
@@ -53,8 +44,8 @@ export default function SuportePage() {
     try {
       const data = await api<{ ok: boolean; message?: string }>(`/api/admin/chat/rooms/${activeRoom.id}/messages`, { method: "POST", body: { content: newMsg, senderType: "ADMIN", senderName: "Admin SG" } });
       if (data.ok) { setNewMsg(""); loadMessages(activeRoom.id); }
-      else setMsg(`❌ ${data.message}`);
-    } catch { setMsg("❌ Erro ao enviar"); }
+      else setMsg(`\u274c ${data.message}`);
+    } catch { setMsg("\u274c Erro ao enviar"); }
     setSending(false);
   }
 
@@ -62,94 +53,93 @@ export default function SuportePage() {
     const newStatus = room.status === "OPEN" ? "CLOSED" : "OPEN";
     try {
       const data = await api<{ ok: boolean; message?: string }>(`/api/admin/chat/rooms/${room.id}`, { method: "PATCH", body: { status: newStatus } });
-      if (data.ok) { setMsg(`✅ Chat ${newStatus === "CLOSED" ? "fechado" : "reaberto"}`); loadRooms(); if (activeRoom?.id === room.id) setActiveRoom({ ...room, status: newStatus }); }
-    } catch { setMsg("❌ Erro"); }
+      if (data.ok) { setMsg(`\u2705 Chat ${newStatus === "CLOSED" ? "fechado" : "reaberto"}`); loadRooms(); if (activeRoom?.id === room.id) setActiveRoom({ ...room, status: newStatus }); }
+    } catch { setMsg("\u274c Erro"); }
   }
 
   const filtered = filterStatus === "ALL" ? rooms : rooms.filter((r) => r.status === filterStatus);
+  const msgBg = msg.startsWith("\u2705") ? "#065f4633" : "#7f1d1d";
+  const msgColor = msg.startsWith("\u2705") ? "#34d399" : "#fca5a5";
 
   return (
-    <div className="flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
-      <div className="flex items-center justify-between mb-4">
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 96px)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">💬 Suporte / Chat</h1>
-          <p className="text-sm text-gray-500">{rooms.length} conversa{rooms.length !== 1 && "s"}</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9" }}>\ud83d\udcac Suporte / Chat</h1>
+          <p style={{ fontSize: 13, color: "#64748b" }}>{rooms.length} conversa{rooms.length !== 1 && "s"}</p>
         </div>
-        <div className="flex gap-2">
+        <div style={{ display: "flex", gap: 8 }}>
           {["ALL", "OPEN", "CLOSED"].map((s) => (
-            <button key={s} onClick={() => setFilterStatus(s)} className={`text-xs px-3 py-1.5 rounded-lg border transition font-semibold ${filterStatus === s ? "bg-sky-500 text-white border-sky-500" : "text-gray-500 border-gray-300 hover:bg-gray-50"}`}>
-              {s === "ALL" ? "Todos" : s === "OPEN" ? "🟢 Abertos" : "🔴 Fechados"}
+            <button key={s} onClick={() => setFilterStatus(s)} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "1px solid", fontWeight: 600, cursor: "pointer", background: filterStatus === s ? "#3b82f6" : "none", color: filterStatus === s ? "#fff" : "#94a3b8", borderColor: filterStatus === s ? "#3b82f6" : "#334155" }}>
+              {s === "ALL" ? "Todos" : s === "OPEN" ? "\ud83d\udfe2 Abertos" : "\ud83d\udd34 Fechados"}
             </button>
           ))}
         </div>
       </div>
 
-      {msg && <div className={`mb-3 rounded-lg p-2 text-sm border ${msg.startsWith("✅") ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-600 border-red-200"}`}>{msg}</div>}
+      {msg && <div style={{ background: msgBg, color: msgColor, padding: "8px 12px", borderRadius: 8, fontSize: 13, marginBottom: 10 }}>{msg}</div>}
 
-      <div className="flex flex-1 gap-4 min-h-0">
+      <div style={{ display: "flex", flex: 1, gap: 14, minHeight: 0 }}>
         {/* Lista de salas */}
-        <div className="w-80 flex-shrink-0 bg-white border border-gray-200 rounded-xl overflow-y-auto">
-          {loading ? <div className="p-4 text-gray-400 text-sm">Carregando…</div> : filtered.length === 0 ? <div className="p-4 text-gray-400 text-sm text-center">Nenhuma conversa</div> : filtered.map((room) => (
-            <div key={room.id} onClick={() => openRoom(room)} className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition ${activeRoom?.id === room.id ? "bg-sky-50 border-l-4 border-l-sky-500" : ""}`}>
-              <div className="flex items-center justify-between">
-                <div className="font-semibold text-sm text-gray-700 truncate flex-1">{room.customer?.name || "Cliente"}</div>
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${room.status === "OPEN" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{room.status === "OPEN" ? "ABERTO" : "FECHADO"}</span>
+        <div style={{ width: 280, flexShrink: 0, background: "#1e293b", border: "1px solid #334155", borderRadius: 12, overflowY: "auto" }}>
+          {loading ? <div style={{ padding: 16, color: "#64748b", fontSize: 13 }}>Carregando\u2026</div> : filtered.length === 0 ? <div style={{ padding: 16, color: "#475569", fontSize: 13, textAlign: "center" }}>Nenhuma conversa</div> : filtered.map((room) => (
+            <div key={room.id} onClick={() => openRoom(room)} style={{ padding: "12px 16px", borderBottom: "1px solid #334155", cursor: "pointer", transition: "all 0.15s", background: activeRoom?.id === room.id ? "#1d4ed822" : "transparent", borderLeft: activeRoom?.id === room.id ? "3px solid #3b82f6" : "3px solid transparent" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{room.customer?.name || "Cliente"}</div>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 10, background: room.status === "OPEN" ? "#065f4633" : "#1e293b", color: room.status === "OPEN" ? "#34d399" : "#64748b" }}>{room.status === "OPEN" ? "ABERTO" : "FECHADO"}</span>
               </div>
-              <div className="text-xs text-gray-500 truncate mt-0.5">{room.subject || "Sem assunto"}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5 flex justify-between">
+              <div style={{ fontSize: 12, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{room.subject || "Sem assunto"}</div>
+              <div style={{ fontSize: 10, color: "#475569", marginTop: 2, display: "flex", justifyContent: "space-between" }}>
                 <span>{new Date(room.updatedAt).toLocaleDateString("pt-BR")}</span>
-                {room._count?.messages && <span className="bg-sky-100 text-sky-600 px-1.5 rounded-full font-bold">{room._count.messages}</span>}
+                {room._count?.messages && <span style={{ background: "#1d4ed822", color: "#60a5fa", padding: "1px 6px", borderRadius: 10, fontWeight: 700 }}>{room._count.messages}</span>}
               </div>
             </div>
           ))}
         </div>
 
         {/* Chat */}
-        <div className="flex-1 flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#1e293b", border: "1px solid #334155", borderRadius: 12, overflow: "hidden" }}>
           {!activeRoom ? (
-            <div className="flex-1 flex items-center justify-center text-gray-400">
-              <div className="text-center">
-                <div className="text-4xl mb-2">💬</div>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#475569" }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>\ud83d\udcac</div>
                 <div>Selecione uma conversa</div>
               </div>
             </div>
           ) : (
             <>
-              {/* Header */}
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #334155", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0f172a" }}>
                 <div>
-                  <div className="font-semibold text-gray-700">{activeRoom.customer?.name || "Cliente"}</div>
-                  <div className="text-xs text-gray-400">{activeRoom.subject || "—"}</div>
+                  <div style={{ fontWeight: 600, color: "#f1f5f9" }}>{activeRoom.customer?.name || "Cliente"}</div>
+                  <div style={{ fontSize: 12, color: "#475569" }}>{activeRoom.subject || "\u2014"}</div>
                 </div>
-                <button onClick={() => toggleRoom(activeRoom)} className={`text-xs border rounded-lg px-3 py-1 font-semibold ${activeRoom.status === "OPEN" ? "text-red-500 border-red-300 hover:bg-red-50" : "text-green-600 border-green-300 hover:bg-green-50"}`}>
-                  {activeRoom.status === "OPEN" ? "🔒 Fechar chat" : "🔓 Reabrir chat"}
+                <button onClick={() => toggleRoom(activeRoom)} style={{ background: "none", border: "1px solid #334155", color: activeRoom.status === "OPEN" ? "#f87171" : "#34d399", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  {activeRoom.status === "OPEN" ? "\ud83d\udd12 Fechar chat" : "\ud83d\udd13 Reabrir chat"}
                 </button>
               </div>
 
-              {/* Mensagens */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
                 {messages.length === 0 ? (
-                  <div className="text-center text-gray-400 text-sm py-8">Nenhuma mensagem ainda</div>
+                  <div style={{ textAlign: "center", color: "#475569", fontSize: 13, padding: 30 }}>Nenhuma mensagem ainda</div>
                 ) : messages.map((m) => (
-                  <div key={m.id} className={`flex ${m.senderType === "ADMIN" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[70%] rounded-xl px-4 py-2 ${m.senderType === "ADMIN" ? "bg-sky-500 text-white" : "bg-gray-100 text-gray-700"}`}>
-                      <div className="text-[10px] font-semibold opacity-70 mb-0.5">{m.senderName}</div>
-                      <div className="text-sm whitespace-pre-wrap">{m.content}</div>
-                      <div className={`text-[9px] mt-1 ${m.senderType === "ADMIN" ? "text-sky-200" : "text-gray-400"}`}>{new Date(m.createdAt).toLocaleString("pt-BR")}</div>
+                  <div key={m.id} style={{ display: "flex", justifyContent: m.senderType === "ADMIN" ? "flex-end" : "flex-start" }}>
+                    <div style={{ maxWidth: "70%", borderRadius: 12, padding: "8px 14px", background: m.senderType === "ADMIN" ? "#3b82f6" : "#0f172a", color: m.senderType === "ADMIN" ? "#fff" : "#f1f5f9" }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.7, marginBottom: 2 }}>{m.senderName}</div>
+                      <div style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{m.content}</div>
+                      <div style={{ fontSize: 9, marginTop: 4, color: m.senderType === "ADMIN" ? "#93c5fd" : "#475569" }}>{new Date(m.createdAt).toLocaleString("pt-BR")}</div>
                     </div>
                   </div>
                 ))}
                 <div ref={messagesEnd} />
               </div>
 
-              {/* Input */}
               {activeRoom.status === "OPEN" ? (
-                <form onSubmit={sendMessage} className="px-4 py-3 border-t border-gray-100 flex gap-2">
-                  <input className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-sky-500" placeholder="Digite uma mensagem…" value={newMsg} onChange={(e) => setNewMsg(e.target.value)} />
-                  <button type="submit" disabled={sending || !newMsg.trim()} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition disabled:opacity-50">{sending ? "…" : "Enviar"}</button>
+                <form onSubmit={sendMessage} style={{ padding: "12px 16px", borderTop: "1px solid #334155", display: "flex", gap: 8 }}>
+                  <input style={{ flex: 1, background: "#0f172a", border: "1px solid #334155", borderRadius: 6, padding: "8px 12px", color: "#f1f5f9", fontSize: 13, outline: "none" }} placeholder="Digite uma mensagem\u2026" value={newMsg} onChange={(e) => setNewMsg(e.target.value)} />
+                  <button type="submit" disabled={sending || !newMsg.trim()} style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: (sending || !newMsg.trim()) ? 0.5 : 1 }}>{sending ? "\u2026" : "Enviar"}</button>
                 </form>
               ) : (
-                <div className="px-4 py-3 border-t border-gray-100 text-center text-xs text-gray-400">Este chat está fechado. Reabra para enviar mensagens.</div>
+                <div style={{ padding: "12px 16px", borderTop: "1px solid #334155", textAlign: "center", fontSize: 12, color: "#475569" }}>Este chat est\u00e1 fechado. Reabra para enviar mensagens.</div>
               )}
             </>
           )}

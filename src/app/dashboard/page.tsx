@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { apiGet, getToken } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import Link from "next/link";
 
 interface Stats {
   customers: number;
@@ -48,50 +49,44 @@ export default function DashboardPage() {
   }, [admin, loadStats]);
 
   const cards = [
-    { label: "Clientes", value: stats.customers, icon: "🏢", color: "bg-sky-50 text-sky-700", href: "/dashboard/clientes" },
-    { label: "Planos", value: stats.plans, icon: "📋", color: "bg-emerald-50 text-emerald-700", href: "/dashboard/planos" },
-    { label: "Contas Bancárias", value: stats.accounts, icon: "🏦", color: "bg-amber-50 text-amber-700", href: "/dashboard/contas" },
-    { label: "Erros registrados", value: stats.errors, icon: "🐛", color: "bg-red-50 text-red-700", href: "/dashboard/logs" },
+    { label: "Clientes", value: stats.customers, icon: "👥", bg: "#0c4a6e22", color: "#38bdf8", href: "/dashboard/clientes" },
+    { label: "Planos", value: stats.plans, icon: "📋", bg: "#065f4622", color: "#34d399", href: "/dashboard/planos" },
+    { label: "Contas Bancárias", value: stats.accounts, icon: "🏦", bg: "#78350f22", color: "#fbbf24", href: "/dashboard/contas" },
+    { label: "Erros registrados", value: stats.errors, icon: "🐛", bg: "#7f1d1d22", color: "#f87171", href: "/dashboard/logs" },
   ];
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-1">Visão Geral</h1>
-          <p className="text-sm text-gray-500">Painel administrativo SYSGE</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", marginBottom: 2 }}>Visão Geral</h1>
+          <p style={{ fontSize: 13, color: "#64748b" }}>Painel administrativo SYSGE</p>
         </div>
-        <button onClick={loadStats} disabled={loading} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition disabled:opacity-50">
+        <button onClick={loadStats} disabled={loading} style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1 }}>
           {loading ? "Carregando…" : "🔄 Atualizar"}
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg p-3 text-sm border bg-red-50 text-red-600 border-red-200">
-          ❌ {error} — <button onClick={loadStats} className="underline font-semibold">tentar novamente</button>
+        <div style={{ background: "#7f1d1d", color: "#fca5a5", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 }}>
+          ❌ {error} — <button onClick={loadStats} style={{ background: "none", border: "none", color: "#fca5a5", textDecoration: "underline", fontWeight: 600, cursor: "pointer" }}>tentar novamente</button>
         </div>
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 rounded-xl bg-gray-100 animate-pulse" />
+            <div key={i} style={{ height: 110, borderRadius: 12, background: "#1e293b", animation: "pulse 2s infinite" }} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
           {cards.map((card) => (
-            <a
-              key={card.label}
-              href={card.href}
-              className={`rounded-xl p-5 ${card.color} border border-transparent hover:border-current/10 transition`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">{card.icon}</span>
-              </div>
-              <p className="text-3xl font-bold">{card.value}</p>
-              <p className="text-sm opacity-75 mt-1">{card.label}</p>
-            </a>
+            <Link key={card.label} href={card.href} style={{ textDecoration: "none", background: card.bg, border: "1px solid #334155", borderRadius: 12, padding: 20, transition: "all 0.15s" }}>
+              <div style={{ fontSize: 24, marginBottom: 10 }}>{card.icon}</div>
+              <p style={{ fontSize: 28, fontWeight: 700, color: card.color }}>{card.value}</p>
+              <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>{card.label}</p>
+            </Link>
           ))}
         </div>
       )}

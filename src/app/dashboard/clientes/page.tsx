@@ -5,30 +5,21 @@ import { Suspense } from "react";
 import { api } from "@/lib/api";
 
 interface Customer {
-  id: string;
-  name: string;
-  slug: string;
-  domain: string | null;
-  plan: string;
-  status: string;
-  isOnline: boolean;
-  isEnabled: boolean;
-  disableReason: string | null;
-  unreadAdmin: number;
-  unresolvedLogs: number;
-  lastPingAt: string | null;
+  id: string; name: string; slug: string; domain: string | null; plan: string;
+  status: string; isOnline: boolean; isEnabled: boolean; disableReason: string | null;
+  unreadAdmin: number; unresolvedLogs: number; lastPingAt: string | null;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: "bg-green-100 text-green-700 border-green-200",
-  TRIAL: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  SUSPENDED: "bg-red-100 text-red-700 border-red-200",
-  CANCELLED: "bg-gray-100 text-gray-600 border-gray-200",
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  ACTIVE: { bg: "#065f4633", color: "#34d399" },
+  TRIAL: { bg: "#78350f33", color: "#fbbf24" },
+  SUSPENDED: { bg: "#7f1d1d33", color: "#f87171" },
+  CANCELLED: { bg: "#1e293b", color: "#64748b" },
 };
+const PLAN_LABELS: Record<string, string> = { FREE: "Free", BASIC: "Básico", PRO: "Pro", ENTERPRISE: "Enterprise" };
 
-const PLAN_LABELS: Record<string, string> = {
-  FREE: "Free", BASIC: "Básico", PRO: "Pro", ENTERPRISE: "Enterprise",
-};
+const inputStyle: React.CSSProperties = { width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 6, padding: "8px 12px", color: "#f1f5f9", fontSize: 13, outline: "none" };
+const labelStyle: React.CSSProperties = { display: "block", color: "#94a3b8", fontSize: 11, fontWeight: 600, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" };
 
 function ClientesContent() {
   const router = useRouter();
@@ -60,17 +51,11 @@ function ClientesContent() {
   useEffect(() => { load(); }, [load]);
 
   async function createCustomer(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setMsg("");
+    e.preventDefault(); setSaving(true); setMsg("");
     try {
       const data = await api<{ ok: boolean; message?: string }>("/api/admin/customers", { method: "POST", body: form });
-      if (data.ok) {
-        setMsg("✅ Cliente criado com sucesso!");
-        setShowNew(false);
-        setForm({ name: "", slug: "", domain: "", plan: "BASIC", status: "TRIAL" });
-        load();
-      } else setMsg(`❌ ${data.message}`);
+      if (data.ok) { setMsg("✅ Cliente criado com sucesso!"); setShowNew(false); setForm({ name: "", slug: "", domain: "", plan: "BASIC", status: "TRIAL" }); load(); }
+      else setMsg(`❌ ${data.message}`);
     } catch (err: any) { setMsg(`❌ ${err.message}`); }
     setSaving(false);
   }
@@ -84,128 +69,107 @@ function ClientesContent() {
     setToggleBusy(id);
     try {
       const data = await api<{ ok: boolean; message?: string }>(`/api/admin/customers/${id}/toggle`, { method: "POST", body: { enabled: enable, reason } });
-      if (data.ok) {
-        setCustomers((prev) => prev.map((c) => c.id === id ? { ...c, isEnabled: enable, disableReason: enable ? null : reason } : c));
-      } else alert(data.message ?? "Erro ao alternar");
+      if (data.ok) setCustomers((prev) => prev.map((c) => c.id === id ? { ...c, isEnabled: enable, disableReason: enable ? null : reason } : c));
+      else alert(data.message ?? "Erro ao alternar");
     } catch { alert("Erro de rede"); }
-    setToggleBusy(null);
-    setDisableModal(null);
+    setToggleBusy(null); setDisableModal(null);
   }
+
+  const msgStyle: React.CSSProperties = msg.startsWith("✅")
+    ? { background: "#065f4633", color: "#34d399", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 }
+    : { background: "#7f1d1d", color: "#fca5a5", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">🏢 Clientes</h1>
-          <p className="text-sm text-gray-500">Gerencie as igrejas cadastradas no sistema</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9" }}>👥 Clientes</h1>
+          <p style={{ fontSize: 13, color: "#64748b" }}>Gerencie as igrejas cadastradas no sistema</p>
         </div>
-        <button onClick={() => setShowNew((p) => !p)} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition">
-          + Novo Cliente
-        </button>
+        <button onClick={() => setShowNew((p) => !p)} style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+ Novo Cliente</button>
       </div>
 
-      {msg && <div className={`mb-4 rounded-lg p-3 text-sm border ${msg.startsWith("✅") ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-600 border-red-200"}`}>{msg}</div>}
+      {msg && <div style={msgStyle}>{msg}</div>}
 
-      {/* Formulário novo cliente */}
       {showNew && (
-        <form onSubmit={createCustomer} className="rounded-xl bg-white border border-gray-200 p-5 mb-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Novo cliente</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Nome *</label>
-              <input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Igreja XYZ" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Slug (único) *</label>
-              <input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" required value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") }))} placeholder="igreja-xyz" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Domínio</label>
-              <input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" value={form.domain} onChange={(e) => setForm((f) => ({ ...f, domain: e.target.value }))} placeholder="app.igrejaxyz.com" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Plano</label>
-              <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 outline-none" value={form.plan} onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))}>
-                <option value="FREE">Free</option>
-                <option value="BASIC">Básico</option>
-                <option value="PRO">Pro</option>
-                <option value="ENTERPRISE">Enterprise</option>
+        <form onSubmit={createCustomer} style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: 20, marginBottom: 20 }}>
+          <h2 style={{ ...labelStyle, marginBottom: 14 }}>Novo cliente</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div><label style={labelStyle}>Nome *</label><input style={inputStyle} required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Igreja XYZ" /></div>
+            <div><label style={labelStyle}>Slug (único) *</label><input style={inputStyle} required value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") }))} placeholder="igreja-xyz" /></div>
+            <div><label style={labelStyle}>Domínio</label><input style={inputStyle} value={form.domain} onChange={(e) => setForm((f) => ({ ...f, domain: e.target.value }))} placeholder="app.igrejaxyz.com" /></div>
+            <div><label style={labelStyle}>Plano</label>
+              <select style={inputStyle} value={form.plan} onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))}>
+                <option value="FREE">Free</option><option value="BASIC">Básico</option><option value="PRO">Pro</option><option value="ENTERPRISE">Enterprise</option>
               </select>
             </div>
           </div>
-          <div className="flex gap-3 mt-4">
-            <button type="submit" disabled={saving} className="rounded-lg bg-sky-500 px-5 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition disabled:opacity-50">{saving ? "Salvando…" : "Criar"}</button>
-            <button type="button" onClick={() => setShowNew(false)} className="rounded-lg px-4 py-2 text-sm text-gray-500 border border-gray-300 hover:bg-gray-50 transition">Cancelar</button>
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button type="submit" disabled={saving} style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 6, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: saving ? 0.5 : 1 }}>{saving ? "Salvando…" : "Criar"}</button>
+            <button type="button" onClick={() => setShowNew(false)} style={{ background: "none", color: "#94a3b8", border: "1px solid #334155", borderRadius: 6, padding: "8px 14px", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
           </div>
         </form>
       )}
 
       {/* Filtros */}
-      <div className="flex gap-3 mb-4">
-        <input className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome, slug ou domínio…" />
-        <select className="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 outline-none" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">Todos</option>
-          <option value="TRIAL">Trial</option>
-          <option value="ACTIVE">Ativo</option>
-          <option value="SUSPENDED">Suspenso</option>
-          <option value="CANCELLED">Cancelado</option>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <input style={{ ...inputStyle, flex: 1 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome, slug ou domínio…" />
+        <select style={{ ...inputStyle, width: 160 }} value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">Todos</option><option value="TRIAL">Trial</option><option value="ACTIVE">Ativo</option><option value="SUSPENDED">Suspenso</option><option value="CANCELLED">Cancelado</option>
         </select>
       </div>
 
       {/* Tabela */}
       {loading ? (
-        <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-14 rounded-lg bg-gray-100 animate-pulse" />)}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{[1,2,3].map((i) => <div key={i} style={{ height: 50, borderRadius: 8, background: "#1e293b" }} />)}</div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500">
-              <tr>
+        <div style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 12, overflow: "hidden" }}>
+          <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #334155" }}>
                 {["Cliente", "Plano", "Status", "Acesso", "Online", "Erros", "Chats", "Ações"].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider">{h}</th>
+                  <th key={h} style={{ textAlign: "left", padding: "10px 14px", fontSize: 10, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {customers.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">Nenhum cliente encontrado</td></tr>
-              ) : (
-                customers.map((c) => {
-                  const enabled = c.isEnabled !== false;
-                  const isBusy = toggleBusy === c.id;
-                  return (
-                    <tr key={c.id} className={`hover:bg-gray-50 transition ${!enabled ? "opacity-60" : ""}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-800">{c.name}</span>
-                          {!enabled && <span className="text-[10px] bg-red-100 text-red-600 rounded px-1.5 py-0.5 font-bold">DESLIGADO</span>}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {c.slug}{c.domain ? ` · ${c.domain}` : ""}
-                          {!enabled && c.disableReason && <span className="ml-1 text-red-400">({c.disableReason})</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">{PLAN_LABELS[c.plan] ?? c.plan}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold border ${STATUS_COLORS[c.status] || "bg-gray-100 text-gray-600"}`}>{c.status}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => toggleCustomer(c, !enabled)} disabled={isBusy} title={enabled ? "Desligar acesso" : "Ligar acesso"}
-                          className={`relative w-11 h-6 rounded-full transition ${enabled ? "bg-green-500" : "bg-gray-300"} ${isBusy ? "cursor-not-allowed" : "cursor-pointer"}`}>
-                          <span className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all ${enabled ? "left-[21px]" : "left-[3px]"}`} />
-                        </button>
-                      </td>
-                      <td className="px-4 py-3">{c.isOnline ? <span className="text-green-500">🟢 Sim</span> : <span className="text-gray-300">⚫ Não</span>}</td>
-                      <td className="px-4 py-3">{c.unresolvedLogs > 0 ? <span className="text-red-500">🐛 {c.unresolvedLogs}</span> : <span className="text-gray-300">—</span>}</td>
-                      <td className="px-4 py-3">{c.unreadAdmin > 0 ? <span className="text-amber-500">💬 {c.unreadAdmin}</span> : <span className="text-gray-300">—</span>}</td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => router.push(`/dashboard/clientes/${c.id}`)} className="rounded-lg border border-sky-300 text-sky-600 px-3 py-1 text-xs font-semibold hover:bg-sky-50 transition">
-                          👁 Ver
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                <tr><td colSpan={8} style={{ textAlign: "center", padding: "40px 14px", color: "#475569" }}>Nenhum cliente encontrado</td></tr>
+              ) : customers.map((c) => {
+                const enabled = c.isEnabled !== false;
+                const isBusy = toggleBusy === c.id;
+                const sc = STATUS_COLORS[c.status] || STATUS_COLORS.CANCELLED;
+                return (
+                  <tr key={c.id} style={{ borderBottom: "1px solid #334155", opacity: enabled ? 1 : 0.5, transition: "all 0.15s" }}>
+                    <td style={{ padding: "10px 14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontWeight: 600, color: "#f1f5f9" }}>{c.name}</span>
+                        {!enabled && <span style={{ fontSize: 9, background: "#7f1d1d", color: "#fca5a5", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>DESLIGADO</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#475569" }}>
+                        {c.slug}{c.domain ? ` · ${c.domain}` : ""}
+                        {!enabled && c.disableReason && <span style={{ marginLeft: 4, color: "#f87171" }}>({c.disableReason})</span>}
+                      </div>
+                    </td>
+                    <td style={{ padding: "10px 14px", color: "#94a3b8" }}>{PLAN_LABELS[c.plan] ?? c.plan}</td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <span style={{ background: sc.bg, color: sc.color, padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 700 }}>{c.status}</span>
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <button onClick={() => toggleCustomer(c, !enabled)} disabled={isBusy} title={enabled ? "Desligar" : "Ligar"}
+                        style={{ position: "relative", width: 40, height: 22, borderRadius: 11, border: "none", background: enabled ? "#22c55e" : "#475569", cursor: isBusy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
+                        <span style={{ position: "absolute", top: 2, width: 18, height: 18, borderRadius: 9, background: "#fff", boxShadow: "0 1px 3px #0003", transition: "all 0.2s", left: enabled ? 20 : 2 }} />
+                      </button>
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>{c.isOnline ? <span style={{ color: "#22c55e" }}>🟢 Sim</span> : <span style={{ color: "#475569" }}>⚫ Não</span>}</td>
+                    <td style={{ padding: "10px 14px" }}>{c.unresolvedLogs > 0 ? <span style={{ color: "#f87171" }}>🐛 {c.unresolvedLogs}</span> : <span style={{ color: "#475569" }}>—</span>}</td>
+                    <td style={{ padding: "10px 14px" }}>{c.unreadAdmin > 0 ? <span style={{ color: "#fbbf24" }}>💬 {c.unreadAdmin}</span> : <span style={{ color: "#475569" }}>—</span>}</td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <button onClick={() => router.push(`/dashboard/clientes/${c.id}`)} style={{ background: "none", border: "1px solid #334155", color: "#60a5fa", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>👁 Ver</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -213,17 +177,15 @@ function ClientesContent() {
 
       {/* Modal desligar */}
       {disableModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md mx-4 rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-1">🔌 Desligar acesso</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Desligar o acesso de <strong className="text-red-600">{disableModal.name}</strong>? O cliente não conseguirá acessar o sistema.
-            </p>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Motivo (opcional)</label>
-            <input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none mb-4" value={disableReason} onChange={(e) => setDisableReason(e.target.value)} placeholder="Ex: Inadimplência, manutenção programada…" autoFocus />
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setDisableModal(null)} className="rounded-lg px-4 py-2 text-sm text-gray-500 border border-gray-300 hover:bg-gray-50 transition">Cancelar</button>
-              <button onClick={() => executeToggle(disableModal.id, false, disableReason)} disabled={toggleBusy === disableModal.id} className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 transition disabled:opacity-50">
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)" }}>
+          <div style={{ width: "100%", maxWidth: 420, margin: "0 16px", background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: 24 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>🔌 Desligar acesso</h3>
+            <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 16 }}>Desligar o acesso de <strong style={{ color: "#f87171" }}>{disableModal.name}</strong>? O cliente não conseguirá acessar o sistema.</p>
+            <label style={labelStyle}>Motivo (opcional)</label>
+            <input style={{ ...inputStyle, marginBottom: 16 }} value={disableReason} onChange={(e) => setDisableReason(e.target.value)} placeholder="Ex: Inadimplência, manutenção…" autoFocus />
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setDisableModal(null)} style={{ background: "none", color: "#94a3b8", border: "1px solid #334155", borderRadius: 6, padding: "8px 14px", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
+              <button onClick={() => executeToggle(disableModal.id, false, disableReason)} disabled={toggleBusy === disableModal.id} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 6, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: toggleBusy === disableModal.id ? 0.5 : 1 }}>
                 {toggleBusy === disableModal.id ? "Desligando…" : "🔌 Desligar"}
               </button>
             </div>
@@ -236,7 +198,7 @@ function ClientesContent() {
 
 export default function ClientesPage() {
   return (
-    <Suspense fallback={<div className="text-gray-400">Carregando…</div>}>
+    <Suspense fallback={<div style={{ color: "#64748b" }}>Carregando…</div>}>
       <ClientesContent />
     </Suspense>
   );
