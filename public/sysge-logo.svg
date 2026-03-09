@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 900" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="800" y2="900">
+      <stop offset="0%" stop-color="#5BC0F8"/>
+      <stop offset="100%" stop-color="#3BA3E8"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded rect -->
+  <rect width="800" height="800" rx="80" fill="url(#bg)"/>
+  
+  <!-- S letter - left -->
+  <path d="M280 200
+    C210 200, 155 250, 155 310
+    C155 370, 200 400, 270 420
+    C340 440, 370 460, 370 500
+    C370 545, 330 575, 275 575
+    C230 575, 190 550, 165 520"
+    stroke="#1a1a1a" stroke-width="28" stroke-linecap="round" fill="none"/>
+  
+  <!-- G letter - right, intertwined -->
+  <path d="M520 220
+    C600 220, 650 280, 650 360
+    C650 440, 600 500, 520 500
+    L560 500
+    L560 420"
+    stroke="#1a1a1a" stroke-width="28" stroke-linecap="round" fill="none"/>
+  
+  <!-- Connecting curves that intertwine S and G -->
+  <ellipse cx="400" cy="380" rx="95" ry="110" 
+    stroke="#1a1a1a" stroke-width="24" fill="none" opacity="0.85"/>
+  
+  <!-- SYSGE text -->
+  <text x="400" y="740" text-anchor="middle" 
+    font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" 
+    font-size="82" font-weight="700" letter-spacing="18" fill="#1a1a1a">
+    SYSGE
+  </text>
+</svg>

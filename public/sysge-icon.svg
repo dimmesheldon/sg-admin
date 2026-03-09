@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512">
+      <stop offset="0%" stop-color="#5BC0F8"/>
+      <stop offset="100%" stop-color="#3BA3E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="64" fill="url(#bg)"/>
+  
+  <!-- S curve -->
+  <path d="M185 140
+    C125 140, 80 185, 80 235
+    C80 290, 120 315, 185 330
+    C250 348, 275 365, 275 400
+    C275 438, 240 465, 185 465
+    C145 465, 115 445, 95 420"
+    stroke="#1a1a1a" stroke-width="22" stroke-linecap="round" fill="none"/>
+  
+  <!-- G curve -->
+  <path d="M350 150
+    C415 150, 445 205, 445 270
+    C445 340, 410 390, 350 390
+    L375 390
+    L375 320"
+    stroke="#1a1a1a" stroke-width="22" stroke-linecap="round" fill="none"/>
+  
+  <!-- Intertwine ellipse -->
+  <ellipse cx="268" cy="285" rx="72" ry="85"
+    stroke="#1a1a1a" stroke-width="19" fill="none" opacity="0.85"/>
+</svg>
