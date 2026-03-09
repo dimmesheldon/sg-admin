@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import { api } from "@/lib/api";
+import { api, setToken, clearToken, getToken } from "@/lib/api";
 
 interface Admin {
   id: string;
@@ -25,11 +25,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const checkSession = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       const data = await api<{ ok: boolean; admin: Admin }>("/api/admin/auth/session");
-      if (data.ok) setAdmin(data.admin);
-      else setAdmin(null);
+      if (data.ok && data.admin) {
+        setAdmin(data.admin as Admin);
+      } else {
+        clearToken();
+        setAdmin(null);
+      }
     } catch {
+      clearToken();
       setAdmin(null);
     } finally {
       setLoading(false);
@@ -41,17 +51,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkSession]);
 
   const login = async (email: string, password: string) => {
-    const data = await api<{ ok: boolean; admin: Admin }>("/api/admin/auth/login", {
+    const data = await api<{ ok: boolean; token: string; admin: Admin }>("/api/admin/auth/login", {
       method: "POST",
       body: { email, password },
     });
-    if (data.ok) setAdmin(data.admin);
+    if (data.ok && data.token) {
+      setToken(data.token);
+      setAdmin(data.admin);
+    }
   };
 
   const logout = async () => {
     try {
-      await api("/api/admin/auth/logout", { method: "POST" });
+      await api("/api/admin/auth/session", { method: "DELETE" });
     } catch { /* ignore */ }
+    clearToken();
     setAdmin(null);
   };
 

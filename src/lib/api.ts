@@ -1,10 +1,26 @@
 /**
  * Cliente HTTP para comunicar com o backend (gestao-igreja).
- * Em produção: aponta para www.adebcomadesma.com.br (temporário)
- * Futuro: cada cliente terá seu próprio domínio.
+ * Usa Bearer token para autenticação cross-origin.
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const TOKEN_KEY = "sg_admin_token";
+
+// Token management
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TOKEN_KEY);
+}
 
 interface ApiOptions {
   method?: string;
@@ -14,6 +30,11 @@ interface ApiOptions {
 
 export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Promise<T> {
   const { method = "GET", body, headers = {} } = opts;
+
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,
@@ -27,6 +48,9 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
 
   const data = await res.json();
   if (!res.ok) {
+    if (res.status === 401) {
+      clearToken();
+    }
     throw new Error(data.message || `Erro ${res.status}`);
   }
   return data as T;
