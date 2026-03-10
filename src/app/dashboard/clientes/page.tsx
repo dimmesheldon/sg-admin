@@ -276,7 +276,7 @@ function ClientesContent() {
                     </td>
                     <td style={{ padding: "10px 14px" }}>
                       <button
-                        onClick={() => router.push(`/admin/clientes/${c.id}`)}
+                        onClick={() => router.push(`/dashboard/clientes/${c.id}`)}
                         style={{ padding: "4px 12px", background: "transparent", color: "#60a5fa", border: "1px solid #1e40af", borderRadius: 5, fontSize: 12, cursor: "pointer" }}
                       >
                         Ver
