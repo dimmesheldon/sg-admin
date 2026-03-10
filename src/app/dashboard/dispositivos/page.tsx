@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -19,6 +19,7 @@ interface Device {
   customerId: string;
   customer: { id: string; name: string; slug: string };
   userId: string;
+  userName: string | null;
   deviceId: string;
   label: string | null;
   ipHint: string | null;
@@ -165,6 +166,30 @@ export default function DispositivosPage() {
   // Clientes únicos da lista atual
   const uniqueCustomers = Array.from(new Map(devices.map((d) => [d.customer.id, d.customer])).values());
 
+  // Agrupar dispositivos por cliente
+  const groupedByCustomer = uniqueCustomers.map((c) => ({
+    customer: c,
+    devices: devices.filter((d) => d.customer.id === c.id),
+  }));
+
+  // Clientes expandidos (accordion)
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const toggleCustomer = (customerId: string) => {
+    setExpandedCustomers((prev) => {
+      const next = new Set(prev);
+      if (next.has(customerId)) next.delete(customerId);
+      else next.add(customerId);
+      return next;
+    });
+  };
+  // Expandir todos os clientes automaticamente quando há poucos
+  useEffect(() => {
+    if (uniqueCustomers.length <= 2 && uniqueCustomers.length > 0) {
+      setExpandedCustomers(new Set(uniqueCustomers.map((c) => c.id)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devices.length]);
+
   return (
     <div>
       {/* Header */}
@@ -258,110 +283,173 @@ export default function DispositivosPage() {
         </div>
       ) : (
         <div style={{ background: "#1e293b", borderRadius: 10, border: "1px solid #334155", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: "#0f172a" }}>
-                {["Cliente", "Usuário", "Dispositivo", "IP", "Status", "Data", "Ações"].map((h) => (
-                  <th key={h} style={thStyle}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {devices.map((d) => (
-                <>
-                  <tr key={d.id} style={{ borderTop: "1px solid #334155", cursor: "pointer" }} onClick={() => setExpandedId(expandedId === d.id ? null : d.id)}>
-                    <td style={tdStyle}>
-                      <div style={{ color: "#f1f5f9", fontWeight: 600 }}>{d.customer.name}</div>
-                      <div style={{ color: "#64748b", fontSize: 11 }}>{d.customer.slug}</div>
-                    </td>
-                    <td style={{ ...tdStyle, color: "#cbd5e1", fontSize: 12, fontFamily: "monospace" }}>
-                      {d.userId.length > 20 ? `${d.userId.slice(0, 8)}…${d.userId.slice(-6)}` : d.userId}
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ color: "#e2e8f0", fontSize: 12 }}>{d.label || "—"}</div>
-                      <div style={{ color: "#475569", fontSize: 10, fontFamily: "monospace" }}>
-                        {d.deviceId.length > 20 ? `${d.deviceId.slice(0, 12)}…` : d.deviceId}
-                      </div>
-                    </td>
-                    <td style={{ ...tdStyle, color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>
-                      {d.ipHint || "—"}
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{
-                        background: (STATUS_COLORS[d.status] || "#6b7280") + "22",
-                        color: STATUS_COLORS[d.status] || "#6b7280",
-                        borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 700,
-                      }}>
-                        {STATUS_LABELS[d.status] || d.status}
+          {groupedByCustomer.map(({ customer: cust, devices: custDevices }) => {
+            const isOpen = expandedCustomers.has(cust.id);
+            const custPending = custDevices.filter((d) => d.status === "PENDING").length;
+            const custApproved = custDevices.filter((d) => d.status === "APPROVED").length;
+            const custRevoked = custDevices.filter((d) => d.status === "REVOKED").length;
+            return (
+              <div key={cust.id}>
+                {/* Header do cliente (accordion) */}
+                <div
+                  onClick={() => toggleCustomer(cust.id)}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "12px 16px", cursor: "pointer", userSelect: "none",
+                    background: isOpen ? "#0f172a" : "#1e293b",
+                    borderBottom: "1px solid #334155",
+                    transition: "background 0.15s",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{
+                      display: "inline-flex", transition: "transform 0.2s",
+                      transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                      color: "#64748b", fontSize: 14,
+                    }}>▶</span>
+                    <div>
+                      <div style={{ color: "#f1f5f9", fontWeight: 700, fontSize: 14 }}>{cust.name}</div>
+                      <div style={{ color: "#64748b", fontSize: 11 }}>{cust.slug}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600 }}>
+                      {custDevices.length} dispositivo{custDevices.length !== 1 ? "s" : ""}
+                    </span>
+                    {custPending > 0 && (
+                      <span style={{ background: "#f59e0b22", color: "#f59e0b", borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
+                        {custPending} pendente{custPending > 1 ? "s" : ""}
                       </span>
-                    </td>
-                    <td style={{ ...tdStyle, color: "#64748b", fontSize: 11 }}>
-                      {new Date(d.createdAt).toLocaleDateString("pt-BR")}
-                      {d.approvedAt && (
-                        <div style={{ color: "#475569", fontSize: 10 }}>
-                          Aprovado: {new Date(d.approvedAt).toLocaleDateString("pt-BR")}
-                        </div>
-                      )}
-                    </td>
-                    <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        {d.status === "PENDING" && (
-                          <button onClick={() => handleAction(d.id, "approve")} disabled={acting === d.id} style={btnApprove}>
-                            ✓ Aprovar
-                          </button>
-                        )}
-                        {d.status === "APPROVED" && (
-                          <button onClick={() => handleAction(d.id, "revoke")} disabled={acting === d.id} style={btnRevoke}>
-                            ✗ Revogar
-                          </button>
-                        )}
-                        {d.status === "REVOKED" && (
-                          <button onClick={() => handleAction(d.id, "approve")} disabled={acting === d.id} style={btnReactivate}>
-                            ↻ Reativar
-                          </button>
-                        )}
-                        <button onClick={() => handleDelete(d.id)} disabled={acting === d.id} style={btnDelete} title="Remover dispositivo">
-                          🗑
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  {expandedId === d.id && (
-                    <tr key={`${d.id}-detail`} style={{ background: "#0f172a" }}>
-                      <td colSpan={7} style={{ padding: "12px 14px" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, fontSize: 12 }}>
-                          <div>
-                            <span style={detailLabel}>ID do dispositivo (completo)</span>
-                            <div style={detailValue}>{d.deviceId}</div>
-                          </div>
-                          <div>
-                            <span style={detailLabel}>ID do usuário (completo)</span>
-                            <div style={detailValue}>{d.userId}</div>
-                          </div>
-                          <div>
-                            <span style={detailLabel}>Aprovado por</span>
-                            <div style={detailValue}>{d.approvedBy || "—"}</div>
-                          </div>
-                          <div>
-                            <span style={detailLabel}>Cliente ID</span>
-                            <div style={detailValue}>{d.customerId}</div>
-                          </div>
-                          <div>
-                            <span style={detailLabel}>Label</span>
-                            <div style={detailValue}>{d.label || "—"}</div>
-                          </div>
-                          <div>
-                            <span style={detailLabel}>IP Hint</span>
-                            <div style={detailValue}>{d.ipHint || "—"}</div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </>
-              ))}
-            </tbody>
-          </table>
+                    )}
+                    {custApproved > 0 && (
+                      <span style={{ background: "#22c55e22", color: "#22c55e", borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
+                        {custApproved}
+                      </span>
+                    )}
+                    {custRevoked > 0 && (
+                      <span style={{ background: "#ef444422", color: "#ef4444", borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
+                        {custRevoked}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dispositivos do cliente (colapsável) */}
+                {isOpen && (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: "#0b1220" }}>
+                        {["Usuário", "Dispositivo", "IP", "Status", "Data", "Ações"].map((h) => (
+                          <th key={h} style={thStyle}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {custDevices.map((d) => (
+                        <React.Fragment key={d.id}>
+                          <tr
+                            style={{ borderTop: "1px solid #334155", cursor: "pointer" }}
+                            onClick={() => setExpandedId(expandedId === d.id ? null : d.id)}
+                          >
+                            <td style={tdStyle}>
+                              <div style={{ color: "#e2e8f0", fontWeight: 600, fontSize: 13 }}>
+                                {d.userName || d.userId}
+                              </div>
+                              {d.userName && (
+                                <div style={{ color: "#64748b", fontSize: 10, fontFamily: "monospace" }}>
+                                  {d.userId.length > 16 ? `${d.userId.slice(0, 8)}…${d.userId.slice(-4)}` : d.userId}
+                                </div>
+                              )}
+                            </td>
+                            <td style={tdStyle}>
+                              <div style={{ color: "#e2e8f0", fontSize: 12 }}>{d.label || "—"}</div>
+                              <div style={{ color: "#475569", fontSize: 10, fontFamily: "monospace" }}>
+                                {d.deviceId.length > 20 ? `${d.deviceId.slice(0, 12)}…` : d.deviceId}
+                              </div>
+                            </td>
+                            <td style={{ ...tdStyle, color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>
+                              {d.ipHint || "—"}
+                            </td>
+                            <td style={tdStyle}>
+                              <span style={{
+                                background: (STATUS_COLORS[d.status] || "#6b7280") + "22",
+                                color: STATUS_COLORS[d.status] || "#6b7280",
+                                borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 700,
+                              }}>
+                                {STATUS_LABELS[d.status] || d.status}
+                              </span>
+                            </td>
+                            <td style={{ ...tdStyle, color: "#64748b", fontSize: 11 }}>
+                              {new Date(d.createdAt).toLocaleDateString("pt-BR")}
+                              {d.approvedAt && (
+                                <div style={{ color: "#475569", fontSize: 10 }}>
+                                  Aprovado: {new Date(d.approvedAt).toLocaleDateString("pt-BR")}
+                                </div>
+                              )}
+                            </td>
+                            <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                {d.status === "PENDING" && (
+                                  <button onClick={() => handleAction(d.id, "approve")} disabled={acting === d.id} style={btnApprove}>
+                                    ✓ Aprovar
+                                  </button>
+                                )}
+                                {d.status === "APPROVED" && (
+                                  <button onClick={() => handleAction(d.id, "revoke")} disabled={acting === d.id} style={btnRevoke}>
+                                    ✗ Revogar
+                                  </button>
+                                )}
+                                {d.status === "REVOKED" && (
+                                  <button onClick={() => handleAction(d.id, "approve")} disabled={acting === d.id} style={btnReactivate}>
+                                    ↻ Reativar
+                                  </button>
+                                )}
+                                <button onClick={() => handleDelete(d.id)} disabled={acting === d.id} style={btnDelete} title="Remover dispositivo">
+                                  🗑
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {expandedId === d.id && (
+                            <tr key={`${d.id}-detail`} style={{ background: "#0f172a" }}>
+                              <td colSpan={6} style={{ padding: "12px 14px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, fontSize: 12 }}>
+                                  <div>
+                                    <span style={detailLabel}>ID do dispositivo (completo)</span>
+                                    <div style={detailValue}>{d.deviceId}</div>
+                                  </div>
+                                  <div>
+                                    <span style={detailLabel}>ID do usuário (completo)</span>
+                                    <div style={detailValue}>{d.userId}</div>
+                                  </div>
+                                  <div>
+                                    <span style={detailLabel}>Aprovado por</span>
+                                    <div style={detailValue}>{d.approvedBy || "—"}</div>
+                                  </div>
+                                  <div>
+                                    <span style={detailLabel}>Cliente ID</span>
+                                    <div style={detailValue}>{d.customerId}</div>
+                                  </div>
+                                  <div>
+                                    <span style={detailLabel}>Label</span>
+                                    <div style={detailValue}>{d.label || "—"}</div>
+                                  </div>
+                                  <div>
+                                    <span style={detailLabel}>IP Hint</span>
+                                    <div style={detailValue}>{d.ipHint || "—"}</div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
