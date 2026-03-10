@@ -6,9 +6,8 @@ import { AuthProvider } from "@/lib/auth-context";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SG Admin — SYSGE",
-  description: "Sistema de Gestão Eclesiástica — Painel Administrativo",
-  icons: { icon: "/sysge-icon.svg" },
+  title: "GI Admin",
+  description: "Gestão de Igrejas — Painel Administrativo",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
