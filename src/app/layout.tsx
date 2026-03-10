@@ -6,7 +6,7 @@ import { AuthProvider } from "@/lib/auth-context";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "GI Admin",
+  title: "Sysge Admin",
   description: "Gestão de Igrejas — Painel Administrativo",
 };
 

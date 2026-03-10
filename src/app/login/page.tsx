@@ -30,7 +30,7 @@ export default function LoginPage() {
       <div style={{ width: 360, background: "#1e293b", borderRadius: 12, padding: "36px 32px", border: "1px solid #334155" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>⛪</div>
-          <h1 style={{ color: "#f1f5f9", fontSize: 20, fontWeight: 700 }}>GI Admin</h1>
+          <h1 style={{ color: "#f1f5f9", fontSize: 20, fontWeight: 700 }}>Sysge Admin</h1>
           <p style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>Painel de controle</p>
         </div>
 
@@ -43,7 +43,7 @@ export default function LoginPage() {
             required
             autoComplete="email"
             style={inputStyle}
-            placeholder="admin@gestaoigreja.com.br"
+            placeholder="sgadmin@sysge.com.br"
           />
 
           <label style={{ ...labelStyle, marginTop: 16 }}>Senha</label>

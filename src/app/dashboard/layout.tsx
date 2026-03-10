@@ -28,7 +28,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <aside className="gi-sidebar">
           <div className="gi-sidebar-brand">
             <span className="gi-brand-icon">⛪</span>
-            <span className="gi-brand-name">GI Admin</span>
+            <span className="gi-brand-name">Sysge Admin</span>
           </div>
 
           <nav className="gi-nav">
